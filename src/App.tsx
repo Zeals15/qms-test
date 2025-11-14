@@ -15,17 +15,32 @@ import Profile from "./pages/Profile";
 import QuotationView from "./pages/QuotationView";
 import QuotationEdit from "./pages/QuotationEdit";
 
+/** small helper to read auth state in one place */
+function useAuth() {
+  return localStorage.getItem("isLoggedIn") === "true";
+}
+
 function Protected({ children }: { children: ReactElement }) {
-  const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
+  const isLoggedIn = useAuth();
   return isLoggedIn ? children : <Navigate to="/login" replace />;
+}
+
+/** Root redirect that chooses login or dashboard depending on auth */
+function HomeRedirect() {
+  const isLoggedIn = useAuth();
+  return <Navigate to={isLoggedIn ? "/dashboard" : "/login"} replace />;
 }
 
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      {/* explicit login route */}
       <Route path="/login" element={<Login />} />
 
+      {/* root: redirect to login or dashboard depending on auth */}
+      <Route path="/" element={<HomeRedirect />} />
+
+      {/* protected app routes */}
       <Route path="/dashboard" element={<Protected><Dashboard /></Protected>} />
       <Route path="/quotations" element={<Protected><Quotations /></Protected>} />
       <Route path="/quotations/:id" element={<Protected><QuotationView /></Protected>} />
@@ -37,7 +52,8 @@ export default function App() {
       <Route path="/settings" element={<Protected><Settings /></Protected>} />
       <Route path="/profile" element={<Protected><Profile /></Protected>} />
 
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      {/* catch-all: send user to the correct landing (login/dashboard) */}
+      <Route path="*" element={<HomeRedirect />} />
     </Routes>
   );
 }

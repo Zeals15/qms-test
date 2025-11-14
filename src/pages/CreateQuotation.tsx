@@ -6,7 +6,6 @@ import { useNavigate } from 'react-router-dom';
 type Product = {
   id: number;
   name: string;
-  hsn_code?: string;
   uom?: string;
   unit_price?: number;
   tax_rate?: number;
@@ -18,10 +17,10 @@ type Customer = {
 };
 
 type LineItem = {
-  id: string; // local id
+  id: string;
   product_id: number;
+  product_name: string;
   description: string;
-  hsn_code: string;
   qty: number;
   uom: string;
   unit_price: number;
@@ -32,26 +31,20 @@ type LineItem = {
 export default function CreateQuotation() {
   const navigate = useNavigate();
 
-  // basic info
   const [customerId, setCustomerId] = useState<number>(0);
   const [salesperson, setSalesperson] = useState<number | null>(null);
-  const [date, setDate] = useState<string>(() => {
-    const d = new Date();
-    return d.toISOString().slice(0, 10);
-  });
+  const [date, setDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
   const [validityDays, setValidityDays] = useState<number>(30);
 
-  // lists
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
 
-  // line items
   const [items, setItems] = useState<LineItem[]>([
     {
       id: `${Date.now()}-0`,
       product_id: 0,
+      product_name: '',
       description: '',
-      hsn_code: '',
       qty: 1,
       uom: 'NOS',
       unit_price: 0,
@@ -60,7 +53,6 @@ export default function CreateQuotation() {
     }
   ]);
 
-  // additional info
   const [terms, setTerms] = useState<string>(
     `1. Payment terms: 30 days from invoice date
 2. Delivery time: 4-6 weeks from order confirmation
@@ -91,8 +83,8 @@ export default function CreateQuotation() {
       {
         id: `${Date.now()}-${s.length}`,
         product_id: 0,
+        product_name: '',
         description: '',
-        hsn_code: '',
         qty: 1,
         uom: 'NOS',
         unit_price: 0,
@@ -114,8 +106,9 @@ export default function CreateQuotation() {
     const p = products.find((x) => x.id === Number(productId));
     updateItem(id, {
       product_id: Number(productId),
+      product_name: p?.name ?? '',
+      description: p?.name ?? '',
       unit_price: p?.unit_price ?? 0,
-      hsn_code: p?.hsn_code ?? '',
       uom: p?.uom ?? 'NOS',
       tax_rate: p?.tax_rate ?? 18
     });
@@ -125,7 +118,6 @@ export default function CreateQuotation() {
     const gross = (it.qty || 0) * (it.unit_price || 0);
     const discount = (gross * (it.discount_percent || 0)) / 100;
     const afterDisc = gross - discount;
-    // tax on after-disc
     const tax = (afterDisc * (it.tax_rate || 0)) / 100;
     const total = afterDisc + tax;
     return { gross, discount, afterDisc, tax, total };
@@ -139,22 +131,21 @@ export default function CreateQuotation() {
       subtotal += line.afterDisc;
       tax += line.tax;
     }
-    const grand = subtotal + tax;
-    return { subtotal, tax, grand };
+    return { subtotal, tax, grand: subtotal + tax };
   }
 
   async function handleSubmit(action: 'draft' | 'submit') {
-    // build payload that your backend expects
     if (!customerId) {
       alert('Select a customer');
       return;
     }
     setSaving(true);
+
     try {
-      // compute a simple quotation number and the total value
       const quotation_no = `Q${Date.now()}`;
       const customer = customers.find((c) => c.id === customerId);
       const customer_name = customer ? customer.company_name : '';
+      const totals = calcTotals();
       const total_value = Math.round((totals.grand || 0) * 100) / 100;
 
       const payload = {
@@ -167,8 +158,8 @@ export default function CreateQuotation() {
         total_value,
         items: items.map((it) => ({
           product_id: it.product_id || null,
+          product_name: it.product_name,
           description: it.description,
-          hsn_code: it.hsn_code,
           qty: it.qty,
           uom: it.uom,
           unit_price: it.unit_price,
@@ -185,9 +176,7 @@ export default function CreateQuotation() {
       navigate('/quotations');
     } catch (err) {
       console.error('Create quotation failed', err);
-      // show detailed error to help debugging (message often contains HTTP status and body)
-      const msg = (err as any)?.message || String(err);
-      alert('Failed to create quotation: ' + msg + '\nSee console and server logs for more details.');
+      alert('Failed to create quotation: ' + (err as any)?.message);
     } finally {
       setSaving(false);
     }
@@ -236,7 +225,6 @@ export default function CreateQuotation() {
                 className="w-full border rounded px-3 py-2 mt-1"
               >
                 <option value="">Select salesperson</option>
-                {/* If you have a users list, map them here. For now show placeholder */}
                 <option value={1}>Salesperson 1</option>
               </select>
             </div>
@@ -267,12 +255,7 @@ export default function CreateQuotation() {
         <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
           <div className="flex justify-between items-center mb-4">
             <h3 className="font-semibold text-lg">Line Items</h3>
-            <button
-              onClick={addItem}
-              className="text-sm px-3 py-2 border rounded bg-white hover:bg-gray-50"
-            >
-              + Add Item
-            </button>
+            <button onClick={addItem} className="text-sm px-3 py-2 border rounded bg-white hover:bg-gray-50">+ Add Item</button>
           </div>
 
           <div className="overflow-x-auto">
@@ -281,18 +264,19 @@ export default function CreateQuotation() {
                 <tr className="text-left text-gray-500">
                   <th className="py-2">S.No</th>
                   <th className="py-2">Description</th>
-                  <th className="py-2">HSN Code</th>
                   <th className="py-2">Qty</th>
                   <th className="py-2">UOM</th>
                   <th className="py-2">Unit Rate (₹)</th>
                   <th className="py-2">Disc. %</th>
                   <th className="py-2">Total (₹)</th>
-                  <th className="py-2"> </th>
+                  <th className="py-2"></th>
                 </tr>
               </thead>
+
               <tbody>
                 {items.map((it, idx) => {
                   const ln = calcLineTotal(it);
+
                   return (
                     <tr key={it.id} className="border-t">
                       <td className="py-3 align-top w-12">{idx + 1}</td>
@@ -305,9 +289,7 @@ export default function CreateQuotation() {
                         >
                           <option value={0}>Select product</option>
                           {products.map((p) => (
-                            <option key={p.id} value={p.id}>
-                              {p.name}
-                            </option>
+                            <option key={p.id} value={p.id}>{p.name}</option>
                           ))}
                         </select>
 
@@ -315,14 +297,6 @@ export default function CreateQuotation() {
                           placeholder="Enter description"
                           value={it.description}
                           onChange={(e) => updateItem(it.id, { description: e.target.value })}
-                          className="w-full border rounded px-2 py-1"
-                        />
-                      </td>
-
-                      <td className="py-3 align-top w-24">
-                        <input
-                          value={it.hsn_code}
-                          onChange={(e) => updateItem(it.id, { hsn_code: e.target.value })}
                           className="w-full border rounded px-2 py-1"
                         />
                       </td>
@@ -370,7 +344,9 @@ export default function CreateQuotation() {
                         />
                       </td>
 
-                      <td className="py-3 align-top text-right w-32 font-semibold">{Number(ln.total).toLocaleString()}</td>
+                      <td className="py-3 align-top text-right w-32 font-semibold">
+                        ₹{Number(ln.total).toLocaleString()}
+                      </td>
 
                       <td className="py-3 align-top w-20">
                         <button
@@ -384,10 +360,11 @@ export default function CreateQuotation() {
                   );
                 })}
               </tbody>
+
             </table>
           </div>
 
-          {/* totals */}
+          {/* Totals */}
           <div className="mt-6 flex justify-end">
             <div className="w-64">
               <div className="flex justify-between text-sm text-gray-600">
@@ -409,6 +386,7 @@ export default function CreateQuotation() {
         {/* Additional Info */}
         <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
           <h3 className="font-semibold text-lg mb-2">Additional Information</h3>
+
           <label className="text-sm text-gray-600">Terms & Conditions</label>
           <textarea
             value={terms}
@@ -425,7 +403,7 @@ export default function CreateQuotation() {
           />
         </div>
 
-        {/* actions */}
+        {/* Actions */}
         <div className="flex justify-end gap-3">
           <button
             onClick={() => navigate('/quotations')}
@@ -434,6 +412,7 @@ export default function CreateQuotation() {
           >
             Cancel
           </button>
+
           <button
             onClick={() => handleSubmit('draft')}
             className="px-4 py-2 border rounded bg-gray-100"
@@ -441,6 +420,7 @@ export default function CreateQuotation() {
           >
             Save as Draft
           </button>
+
           <button
             onClick={() => handleSubmit('submit')}
             className="px-4 py-2 rounded bg-rose-500 text-white"

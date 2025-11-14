@@ -164,3 +164,53 @@ input:-webkit-autofill, textarea:-webkit-autofill, select:-webkit-autofill {
   .login-left { display: none; }
   .login-right { padding: 2rem; }
 }
+
+/* ---------- project-specific helpers (append to index.css) ---------- */
+
+/* gentle card shadow (use your token) */
+.shadow-subtle {
+  box-shadow: var(--shadow-subtle);
+}
+
+/* two-line clamp for product descriptions (fallback CSS if Tailwind line-clamp plugin unavailable) */
+/* fallback + vendor prefixed line-clamp */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2; /* WebKit/Blink */
+  line-clamp: 2;         /* non-standard fallback (satisfies some linters) */
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* subtle table header background and border helpers used in Products.tsx */
+.table-header {
+  background: rgba(245, 247, 250, 1);
+  border-bottom: 1px solid rgba(15,23,42,0.04);
+}
+
+/* small utility to tighten action button spacing */
+.row-actions button {
+  padding: 0;
+  margin: 0 6px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+/* ensure inputs / textarea in modal match project look */
+textarea.input-field {
+  resize: vertical;
+  min-height: 72px;
+}
+
+/* optional: make the primary button style match existing tokens */
+.btn-rose {
+  background: hsl(var(--color-coral));
+  color: #fff;
+  border: none;
+  padding: 0.5rem 0.9rem;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+}
+.btn-rose:hover { filter: brightness(0.96); }

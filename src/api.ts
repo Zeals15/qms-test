@@ -1,5 +1,6 @@
 // src/api.ts
-const BASE = import.meta.env.VITE_API_BASE || 'http://localhost:4000';
+export const API_URL = import.meta.env.VITE_API_BASE || 'http://localhost:4000';
+const BASE = API_URL;
 
 async function request(path: string, opts: RequestInit = {}) {
   const url = `${BASE}${path}`;

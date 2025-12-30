@@ -1,5 +1,6 @@
 // src/api.ts
-export const API_URL = import.meta.env.VITE_API_BASE || "http://localhost:4000";
+export const API_URL = import.meta.env.VITE_API_BASE || "http://localhost:8080";
+console.log("API BASE:", import.meta.env.VITE_API_BASE);
 const BASE = API_URL;
 
 export type JsonLike = any;

@@ -1765,8 +1765,8 @@ app.get('/api/notifications', authMiddleware, async (req, res) => {
 
 //--- PDF Router mount---///
 
-const quotationPdfRouter = require('./routes/quotation-pdf');
-app.use('/api/quotations', quotationPdfRouter);
+//const quotationPdfRouter = require('./routes/quotation-pdf');
+//app.use('/api/quotations', quotationPdfRouter);
 
 // ---------- Customers CRUD ----------
 app.get('/api/customers', async (req, res) => {

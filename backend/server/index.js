@@ -389,17 +389,19 @@ async function ensureCustomerContactsTable() {
     conn = await db.getConnection();
     await conn.query(`
       CREATE TABLE IF NOT EXISTS customer_contacts (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        location_id INT NOT NULL,
-        contact_name VARCHAR(255) NOT NULL,
-        phone VARCHAR(50),
-        email VARCHAR(255),
-        is_primary TINYINT DEFAULT 0,
-        is_active TINYINT DEFAULT 1,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (location_id) REFERENCES customer_locations(id) ON DELETE CASCADE,
-        INDEX idx_location_id (location_id)
-      ) ENGINE=INNODB;
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  customer_location_id INT NOT NULL,
+  contact_name VARCHAR(255) NOT NULL,
+  phone VARCHAR(50),
+  email VARCHAR(255),
+  is_primary TINYINT DEFAULT 0,
+  is_active TINYINT DEFAULT 1,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (customer_location_id)
+    REFERENCES customer_locations(id)
+    ON DELETE CASCADE,
+  INDEX idx_customer_location_id (customer_location_id)
+) ENGINE=INNODB;
     `);
   } finally {
     if (conn) try { await conn.release(); } catch (e) { }
@@ -2138,7 +2140,7 @@ app.post('/api/customer-locations/:locationId/contacts', async (req, res) => {
 
     const [result] = await conn.query(
       `INSERT INTO customer_contacts
-       (location_id, contact_name, phone, email, is_primary)
+       (customer_location_id, contact_name, phone, email, is_primary)
        VALUES (?, ?, ?, ?, ?)`,
       [locationId, contact_name.trim(), phone || null, email || null, is_primary ? 1 : 0]
     );

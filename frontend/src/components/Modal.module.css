@@ -1,0 +1,36 @@
+/* Modal.module.css */
+
+.modalWrapper {
+  width: 95%;
+  max-width: 720px;
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.modalHeader {
+  /* the outer header container (keeps spacing if you want other header elements) */
+}
+
+.headerInner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.modalTitle {
+  margin: 0;
+  font-size: 1.125rem; /* ~18px */
+  line-height: 1.2;
+}
+
+.modalContent {
+  /* content area styling (children) */
+}
+
+.modalFooter {
+  margin-top: 16px;
+  text-align: right;
+}

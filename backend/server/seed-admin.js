@@ -34,23 +34,26 @@ const mysql = require('mysql2/promise');
 
     const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 10);
 
+    // 🔐 UPSERT ADMIN (create or update safely)
     await conn.query(
       `
       INSERT INTO users (email, name, password_hash, role, is_active)
-      SELECT ?, 'Admin', ?, 'admin', 1
-      WHERE NOT EXISTS (
-        SELECT 1 FROM users WHERE email = ? AND role = 'admin'
-      )
+      VALUES (?, 'Admin', ?, 'admin', 1)
+      ON DUPLICATE KEY UPDATE
+        password_hash = VALUES(password_hash),
+        is_active = 1,
+        role = 'admin'
       `,
-      [ADMIN_EMAIL, passwordHash, ADMIN_EMAIL]
+      [ADMIN_EMAIL, passwordHash]
     );
 
-    console.log('✅ Admin ensured');
+    console.log('✅ Admin user created / updated successfully');
     console.log(`👉 Email: ${ADMIN_EMAIL}`);
 
     await conn.end();
+    process.exit(0);
   } catch (err) {
-    console.error('❌ Admin seed failed:', err.message);
+    console.error('❌ Admin seed failed:', err);
     process.exit(1);
   }
 })();

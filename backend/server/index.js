@@ -18,6 +18,11 @@ const dashboardRoutes = require("./routes/dashboard");
 
 const app = express();
 
+app.get('/', (req, res) => {
+  res.send('QMS Backend is running successfully 🚀');
+});
+
+
 // Serve static public assets (frontend expects /logo.png etc.)
 app.use(express.static(path.join(__dirname, '..', 'public'), { maxAge: '1h' }));
 

@@ -209,8 +209,8 @@ async function ensureUsersTable() {
 }
 
 
-async function getNextRunningNumber(conn, fyCode) {
-  const prefix = `QT/${fyCode}/%/`;
+async function getNextRunningNumber(conn, fyCode, initials) {
+  const prefix = `QT/${fyCode}/${initials}/%`;
 
   const [rows] = await conn.query(
     `
@@ -297,6 +297,8 @@ async function ensureQuotationsTable() {
       { name: 'customer_address', def: 'customer_address TEXT' },
       { name: 'customer_gst', def: 'customer_gst VARCHAR(64)' },
       { name: 'reissued_from_id', def: 'reissued_from_id INT DEFAULT NULL' },
+      { name: 'customer_location_id', def: 'customer_location_id INT' },
+      { name: 'customer_contact_id', def: 'customer_contact_id INT' },
       { name: 'payment_terms', def: 'payment_terms TEXT DEFAULT NULL' }
 
     ];
@@ -1352,7 +1354,7 @@ app.post('/api/quotations', authMiddleware, async (req, res) => {
     const fyCode = buildFiscalYearStringForDate(dbDate || new Date());
 
 
-    const runningNo = await getNextRunningNumber(conn, fyCode);
+   const runningNo = await getNextRunningNumber(conn, fyCode, initials);
 
     const quotation_no =
       `QT/${fyCode}/${initials}/${String(runningNo).padStart(3, '0')}`;

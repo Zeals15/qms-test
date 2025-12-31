@@ -209,8 +209,8 @@ async function ensureUsersTable() {
 }
 
 
-async function getNextRunningNumber(conn, fyCode, initials) {
-  const prefix = `QT/${fyCode}/${initials}/%`;
+async function getNextRunningNumber(conn, fyCode) {
+  const prefix = `QT/${fyCode}/%`;
 
   const [rows] = await conn.query(
     `
@@ -231,6 +231,7 @@ async function getNextRunningNumber(conn, fyCode, initials) {
 
   return Number.isFinite(lastSuffix) ? lastSuffix + 1 : 1;
 }
+
 
 async function ensureQuotationsTable() {
   let conn;
@@ -1354,7 +1355,7 @@ app.post('/api/quotations', authMiddleware, async (req, res) => {
     const fyCode = buildFiscalYearStringForDate(dbDate || new Date());
 
 
-   const runningNo = await getNextRunningNumber(conn, fyCode, initials);
+   const runningNo = await getNextRunningNumber(conn, fyCode);
 
     const quotation_no =
       `QT/${fyCode}/${initials}/${String(runningNo).padStart(3, '0')}`;
@@ -1716,7 +1717,7 @@ app.post('/api/quotations/:id/reissue', authMiddleware, async (req, res) => {
       .toUpperCase();
 
     // 🔢 Generate quotation number
-    const fyCode = getFinancialYearCode(new Date());
+    const fyCode = buildFiscalYearStringForDate(dbDate || new Date());
     const runningNo = await getNextRunningNumber(conn, fyCode, initials);
     const quotation_no = `QT/${fyCode}/${initials}/${String(runningNo).padStart(3, '0')}`;
 

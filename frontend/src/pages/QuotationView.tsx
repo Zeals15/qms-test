@@ -1434,6 +1434,58 @@ Regards,`
   }
 
 
+  ///Outlook option for the mail :-
+
+  function openEmailClient(provider: "gmail" | "outlook") {
+    if (!quote) return;
+
+    const to = encodeURIComponent(quote.customer_email || "");
+    const subject = encodeURIComponent(
+      `Quotation ${quote.quotation_no || quote.id}`
+    );
+
+    const body = encodeURIComponent(
+      `Hello,
+
+Please find the quotation attached.
+(Kindly attach the PDF before sending)
+
+Quotation Link:
+${window.location.origin}/quotations/${quote.id}
+
+Ref: ${quote.quotation_no || quote.id}
+
+Regards,`
+    );
+
+    let url = "";
+
+    if (provider === "gmail") {
+      url =
+        `https://mail.google.com/mail/?view=cm&fs=1` +
+        `&to=${to}` +
+        `&su=${subject}` +
+        `&body=${body}`;
+    }
+
+    if (provider === "outlook") {
+      url =
+        `https://outlook.office.com/mail/deeplink/compose` +
+        `?to=${to}` +
+        `&subject=${subject}` +
+        `&body=${body}`;
+    }
+
+    window.open(url, "_blank", "noopener,noreferrer");
+    setToast(
+      provider === "gmail"
+        ? "Gmail compose opened"
+        : "Outlook compose opened"
+    );
+  }
+
+
+
   /* ---------- render ---------- */
   if (loading) {
     return (
@@ -1882,13 +1934,39 @@ Regards,`
             </button>
 
             {/* EMAIL */}
-            <button
-              onClick={sendEmail}
-              title="Send email"
-              className="p-2 rounded border bg-white hover:bg-gray-50"
-            >
-              <IconMail />
-            </button>
+            <div className="relative">
+              <button
+                title="Send email"
+                className="p-2 rounded border bg-white hover:bg-gray-50"
+                onClick={() => _setActionsMenuOpen((v) => !v)}
+              >
+                <IconMail />
+              </button>
+
+              {_actionsMenuOpen && (
+                <div className="absolute right-0 mt-2 w-40 bg-white border rounded-lg shadow-lg z-50">
+                  <button
+                    onClick={() => {
+                      openEmailClient("gmail");
+                      _setActionsMenuOpen(false);
+                    }}
+                    className="w-full px-4 py-2 text-sm text-left hover:bg-gray-50"
+                  >
+                    📧 Gmail
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      openEmailClient("outlook");
+                      _setActionsMenuOpen(false);
+                    }}
+                    className="w-full px-4 py-2 text-sm text-left hover:bg-gray-50"
+                  >
+                    📨 Outlook
+                  </button>
+                </div>
+              )}
+            </div>
 
 
             <div className="flex items-center gap-2">
@@ -2230,7 +2308,7 @@ Regards,`
                     today.setHours(0, 0, 0, 0);
                     lastDate.setHours(0, 0, 0, 0);
 
-                    
+
 
                     const meta =
                       FOLLOWUP_TYPE_META[

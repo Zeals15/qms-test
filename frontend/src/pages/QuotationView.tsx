@@ -1065,18 +1065,26 @@ export default function QuotationView() {
       : "No terms and conditions provided.";
 
     const css = `
-@page { size: A4; margin: 10mm; }
+@page {
+  size: A4;
+  margin: 11mm;
+
+  @bottom-right {
+    content: "Page " counter(page) " of " counter(pages);
+    font-size: 10px;
+  }
+}
 
 body {
   font-family: Arial, Helvetica, sans-serif;
-  font-size: 10.5px;
+  font-size: 12px;
   color: #000;
-  line-height: 1.45; /* BIGGEST IMPROVEMENT */
+  line-height: 1.55; /* BIGGEST IMPROVEMENT */
 }
 
 .page {
   border: 1px solid #000;
-  padding: 14px; /* more air inside page */
+  padding: 16px; /* more air inside page */
 }
 
 .bold { font-weight: bold; }
@@ -1094,15 +1102,16 @@ body {
 .logo { height: 55px; }
 
 .title {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: bold;
+  letter-spacing: 0.2px;
 }
 
 /* SEPARATORS */
 hr {
   border: none;
   border-top: 1px solid #000;
-  margin: 10px 0; /* more breathing space */
+  margin: 12px 0; /* more breathing space */
 }
 
 /* PARTY */
@@ -1115,6 +1124,7 @@ hr {
 
 .section-title {
   font-weight: bold;
+   font-size: 12.5px;
   margin-bottom: 4px;
 }
 
@@ -1141,13 +1151,14 @@ hr {
 .items-table th,
 .items-table td {
   border: 1px solid #000;
-  padding: 6px 5px;   /* more readable rows */
+  padding: 7px 6px;   /* more readable rows */
   vertical-align: top;
 }
 
 .items-table th {
   background: #efefef;
-  font-size: 10px;
+   font-size: 11px;
+  font-weight: bold;
 }
 
 /* SUMMARY */
@@ -1169,25 +1180,26 @@ hr {
 
 .summary-table .grand {
   font-weight: bold;
-  font-size: 11.5px;
+   font-size: 13px; 
 }
 
 /* TERMS */
 .terms {
-  margin-top: 4px;
+  margin-top: 6px;
+  font-size: 11.5px;
+  line-height: 1.6;
 }
 
 /* FOOTER */
 .footer-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 20px;
-  margin-top: 10px;
+  gap: 24px;
+  margin-top: 13px;
+  font-size: 11.5px;
 }
 
 `;
-
-
 
     /* ---------------- HTML ---------------- */
 
@@ -1308,7 +1320,9 @@ hr {
   <!-- LEFT: AMOUNT IN WORDS -->
   <div>
     <strong>Amount in Words</strong><br/>
-    ${amountInWords}
+    <div style="font-size: 11px; margin-top: 6px;">
+  <strong>Currency:</strong>  (Indian Rupees)
+</div>INR:- ${amountInWords}
   </div>
 
   <!-- RIGHT: SUMMARY TABLE -->

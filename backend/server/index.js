@@ -11,6 +11,7 @@ const http = require('http');
 const { calculateTotals } = require('./utils/quotationCalculator');
 const { Server } = require('socket.io');
 const { getSettingsFromDB } = require("./utils/settings");
+const crypto = require('crypto');
 
 const nodemailer = require('nodemailer');
 
@@ -68,6 +69,10 @@ function nameToInitials(name) {
     .map(n => String(n)[0].toUpperCase())
     .slice(0, 3)
     .join('');
+}
+
+function generateTokenId() {
+  return crypto.randomBytes(32).toString('hex');
 }
 
 function getFinancialYearCode(date = new Date()) {
@@ -198,6 +203,7 @@ async function ensureUsersTable() {
         position VARCHAR(100),
         role VARCHAR(50) NOT NULL DEFAULT 'user',
         is_active TINYINT(1) NOT NULL DEFAULT 1,
+        active_token_id VARCHAR(128) DEFAULT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         UNIQUE KEY uq_users_email (email),
         UNIQUE KEY uq_users_username (username)
@@ -731,9 +737,26 @@ app.post('/api/login', async (req, res) => {
       name: user.name,
     };
 
-    const token = jwt.sign(tokenPayload, JWT_SECRET, {
-      expiresIn: '8h',
-    });
+    // 🔐 Generate session token ID
+const tokenId = generateTokenId();
+
+/* 🔒 Enforce single active session for NON-admin users */
+if (user.role !== 'admin') {
+  await conn.query(
+    `UPDATE users SET active_token_id = ? WHERE id = ?`,
+    [tokenId, user.id]
+  );
+}
+
+/* JWT payload now includes token_id */
+const token = jwt.sign(
+  {
+    ...tokenPayload,
+    token_id: tokenId,
+  },
+  JWT_SECRET,
+  { expiresIn: '8h' }
+);
 
     return res.json({
       token,
@@ -1116,7 +1139,7 @@ async function handleNextQuotation(req, res) {
     // 🔐 Preview must use same lock logic (but rollback)
     await conn.beginTransaction();
 
-    const runningNo = await getNextRunningNumber(conn, fyCode, initials);
+    const runningNo = await getNextRunningNumber(conn, fyCode);
 
     if (conn) await conn.rollback(); // preview only
 

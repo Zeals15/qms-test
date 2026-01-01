@@ -16,7 +16,7 @@ const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 
 const dashboardRoutes = require("./routes/dashboard");
-
+const customerRoutes = require("./routes/customers");
 const app = express();
 
 app.get('/', (req, res) => {
@@ -49,7 +49,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 app.use(express.json({ limit: '1mb' }));
-
+app.use("/api", customerRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 
 // App-level constants

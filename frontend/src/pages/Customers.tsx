@@ -70,7 +70,8 @@ export default function Customers() {
   }
 
 
-  async function handleDownloadAllCustomersCSV() {
+  async function handleDownloadCSV() {
+  try {
     const token = localStorage.getItem("token");
     if (!token) {
       toast.error("Authentication required");
@@ -80,6 +81,7 @@ export default function Customers() {
     const res = await fetch(
       `${import.meta.env.VITE_API_BASE}/api/customers/export`,
       {
+        method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -87,23 +89,27 @@ export default function Customers() {
     );
 
     if (!res.ok) {
-      toast.error("Export failed");
-      return;
+      throw new Error("Export failed");
     }
 
     const blob = await res.blob();
-    const url = window.URL.createObjectURL(blob);
 
+    // Create file download
+    const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `customers_full_export.csv`;
+    a.download = "customers_full_export.csv";
     document.body.appendChild(a);
     a.click();
+
+    // Cleanup
     a.remove();
-
     window.URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error(err);
+    toast.error("Export failed");
   }
-
+}
 
   // ---- IMPORTANT: submit maps company_name -> name for the server ----
   async function submit() {
@@ -217,7 +223,7 @@ export default function Customers() {
           <div className="flex items-center gap-2">
             {permissions.isAdmin && (
               <button
-                onClick={handleDownloadAllCustomersCSV}
+                onClick={handleDownloadCSV}
                 className="px-4 py-2 text-sm rounded-md border bg-white hover:bg-slate-50"
               >
                 Download CSV

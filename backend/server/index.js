@@ -1,5 +1,5 @@
 // server/index.js
-require('dotenv').config();
+
 
 const express = require('express');
 const cors = require('cors');
@@ -10,7 +10,7 @@ const path = require('path');
 const http = require('http');
 const { calculateTotals } = require('./utils/quotationCalculator');
 const { Server } = require('socket.io');
-const { getSettingsFromDB } = require("./utils/settings");
+const { getSettingsFromDB } = require("./utils/settings")
 const crypto = require('crypto');
 
 const nodemailer = require('nodemailer');
@@ -272,10 +272,14 @@ async function ensureQuotationsTable() {
       ) ENGINE=INNODB;
     `);
 
-    const schema =
-      process.env.MYSQLDATABASE ||
-      process.env.MYSQL_DATABASE ||
-      'railway';
+   const schema =
+  process.env.MYSQLDATABASE ||
+  process.env.MYSQL_DATABASE ||
+  process.env.DB_NAME;
+   if (!schema) {
+  throw new Error('DB_NAME environment variable is not set');
+}
+
     const table = 'quotations';
     const [cols] = await conn.query(
       `SELECT COLUMN_NAME FROM information_schema.columns WHERE table_schema = ? AND table_name = ?`,
@@ -435,10 +439,15 @@ async function ensureNotificationsTable() {
 
 
 
-    const schema =
-      process.env.MYSQLDATABASE ||
-      process.env.MYSQL_DATABASE ||
-      'railway';
+   
+      const schema =
+  process.env.MYSQLDATABASE ||
+  process.env.MYSQL_DATABASE ||
+  process.env.DB_NAME;
+      if (!schema) {
+  throw new Error('DB_NAME environment variable is not set');
+}
+
     const [idxRows] = await conn.query(
       `SELECT COUNT(*) AS cnt 
       FROM information_schema.statistics
@@ -592,8 +601,8 @@ async function ensureAppSettingsTable() {
     await ensureNotificationsTable();
     console.log('Database schema ready');
   } catch (err) {
-    console.error('❌ Failed to initialize DB schema:', err);
-    process.exit(1);
+     console.error('❌ Failed to initialize DB schema:', err);
+    throw err;
   }
 })();
 
@@ -1716,7 +1725,7 @@ app.post('/api/quotations/:id/reissue', authMiddleware, async (req, res) => {
 
     // 🔢 Generate quotation number
     const fyCode = buildFiscalYearStringForDate(dbDate || new Date());
-    const runningNo = await getNextRunningNumber(conn, fyCode, initials);
+    const runningNo = await getNextRunningNumber(conn, fyCode);
     const quotation_no = `QT/${fyCode}/${initials}/${String(runningNo).padStart(3, '0')}`;
 
     const itemsJson =
@@ -3800,32 +3809,13 @@ if (require.main === module) {
         }
         process.exit(1);
       });
-
-      const shutdown = async () => {
-        console.log('Shutdown initiated — closing server and DB pool');
-        try {
-          if (app.locals && app.locals.io) {
-            try { await app.locals.io.close(); } catch (e) { console.warn('Error closing io', e && e.message); }
-          }
-          await db.endPool();
-        } catch (e) {
-          console.error('Error during shutdown', e && e.message ? e.message : e);
-        }
-        httpServer.close(() => process.exit(0));
-      };
-
-      process.on('SIGINT', shutdown);
-      process.on('SIGTERM', shutdown);
+    
     } catch (err) {
       console.error('Failed to start server with Socket.IO:', err && (err.message || err));
       process.exit(1);
     }
   })();
 }
-
-
-
-
 
 
 

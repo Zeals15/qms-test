@@ -1,7 +1,7 @@
 // server/db.js
 const mysql = require('mysql2/promise');
 
-let pool;
+let pool = null;
 
 function initPool() {
   if (pool) return pool;
@@ -36,5 +36,12 @@ module.exports = {
   getConnection: async () => {
     const p = initPool();
     return p.getConnection();
+  },
+
+  endPool: async () => {
+    if (pool) {
+      await pool.end();
+      pool = null;
+    }
   },
 };

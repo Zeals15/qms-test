@@ -163,18 +163,6 @@ export default function CustomerDetails() {
     }
   }
 
-  function handleDownloadCSV() {
-  const token = localStorage.getItem("token");
-  if (!token) {
-    toast.error("Authentication required");
-    return;
-  }
-
-  const url = `${import.meta.env.VITE_API_BASE}/api/customers/${customerId}/export`;
-
-  // Direct browser download (correct for CSV)
-  window.open(url, "_blank");
-}
 
   function handleEditContact(contact: Contact) {
     setEditingContact(contact);
@@ -210,6 +198,45 @@ export default function CustomerDetails() {
       toast.error("Failed to delete contact");
     }
   }
+
+  async function handleDownloadCSV() {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      toast.error("Not authenticated");
+      return;
+    }
+
+    const res = await fetch(
+      `${import.meta.env.VITE_API_BASE}/api/customers/${customerId}/export`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!res.ok) {
+      toast.error("Failed to download CSV");
+      return;
+    }
+
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `customer_${customerId}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    window.URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error(err);
+    toast.error("Download failed");
+  }
+}
 
   async function handleUpdateContact() {
     if (!activeLocationId || !editingContact) return;

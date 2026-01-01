@@ -4,10 +4,12 @@ import { api } from '../api';
 import Layout from '../components/layout/Layout';
 import { toast } from 'react-toastify';
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+
 type C = {
   id: number;
   company_name: string;
-  
+
   gstin?: string;
   address?: string;
 };
@@ -19,13 +21,14 @@ export default function Customers() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [form, setForm] = useState({
-   company_name: '',
-  gstin: '',
-  address: ''
+    company_name: '',
+    gstin: '',
+    address: ''
   });
- const navigate = useNavigate();
+  const navigate = useNavigate();
   const [editingId, setEditingId] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const { permissions } = useAuth();
 
   // pagination
   const [page, setPage] = useState(1);
@@ -66,6 +69,42 @@ export default function Customers() {
     }
   }
 
+
+  async function handleDownloadAllCustomersCSV() {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      toast.error("Authentication required");
+      return;
+    }
+
+    const res = await fetch(
+      `${import.meta.env.VITE_API_BASE}/api/customers/export`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!res.ok) {
+      toast.error("Export failed");
+      return;
+    }
+
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `customers_full_export.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    window.URL.revokeObjectURL(url);
+  }
+
+
   // ---- IMPORTANT: submit maps company_name -> name for the server ----
   async function submit() {
     if (!form.company_name.trim()) {
@@ -80,38 +119,38 @@ export default function Customers() {
     try {
       // Build payload matching server DB column names (server expects `name`)
       const payload = {
-       company_name: form.company_name,
-  gstin: form.gstin,
-  address: form.address
+        company_name: form.company_name,
+        gstin: form.gstin,
+        address: form.address
       };
 
       if (editingId != null) {
-  // ---- UPDATE CUSTOMER ----
-  if (typeof (api as any).updateCustomer === 'function') {
-    await (api as any).updateCustomer(editingId, payload);
-  } else if (typeof (api as any).editCustomer === 'function') {
-    await (api as any).editCustomer(editingId, payload);
-  } else {
-    console.warn('No update API found, falling back to add');
-    await api.addCustomer(payload);
-  }
+        // ---- UPDATE CUSTOMER ----
+        if (typeof (api as any).updateCustomer === 'function') {
+          await (api as any).updateCustomer(editingId, payload);
+        } else if (typeof (api as any).editCustomer === 'function') {
+          await (api as any).editCustomer(editingId, payload);
+        } else {
+          console.warn('No update API found, falling back to add');
+          await api.addCustomer(payload);
+        }
 
-  toast.success('Customer updated');
+        toast.success('Customer updated');
 
-} else {
-  // ---- ADD CUSTOMER (FIXED) ----
-  const created = await api.addCustomer(payload);
+      } else {
+        // ---- ADD CUSTOMER (FIXED) ----
+        const created = await api.addCustomer(payload);
 
-  // ✅ instant UI update (NO reload dependency)
-  setRows(prev => [created, ...prev]);
+        // ✅ instant UI update (NO reload dependency)
+        setRows(prev => [created, ...prev]);
 
-  toast.success('Customer added');
-}
+        toast.success('Customer added');
+      }
 
-// ---- COMMON CLEANUP ----
-setOpen(false);
-setEditingId(null);
-setForm({ company_name: '', address: '', gstin: '' });
+      // ---- COMMON CLEANUP ----
+      setOpen(false);
+      setEditingId(null);
+      setForm({ company_name: '', address: '', gstin: '' });
       //await load();
     } catch (e) {
       console.error(e);
@@ -126,15 +165,15 @@ setForm({ company_name: '', address: '', gstin: '' });
   }
 
   function filteredRows() {
-  if (!query.trim()) return rows;
-  const q = query.toLowerCase();
-  return rows.filter(
-    (r) =>
-      r.company_name.toLowerCase().includes(q) ||
-      (r.gstin || '').toLowerCase().includes(q) ||
-      (r.address || '').toLowerCase().includes(q)
-  );
-}
+    if (!query.trim()) return rows;
+    const q = query.toLowerCase();
+    return rows.filter(
+      (r) =>
+        r.company_name.toLowerCase().includes(q) ||
+        (r.gstin || '').toLowerCase().includes(q) ||
+        (r.address || '').toLowerCase().includes(q)
+    );
+  }
 
   const filtered = useMemo(() => filteredRows(), [rows, query]);
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
@@ -175,19 +214,29 @@ setForm({ company_name: '', address: '', gstin: '' });
             <h1 className="text-3xl font-semibold text-slate-800">Manage customers</h1>
             <p className="text-sm text-slate-500 mt-1">Contact details, GSTIN, and quick actions</p>
           </div>
+          <div className="flex items-center gap-2">
+            {permissions.isAdmin && (
+              <button
+                onClick={handleDownloadAllCustomersCSV}
+                className="px-4 py-2 text-sm rounded-md border bg-white hover:bg-slate-50"
+              >
+                Download CSV
+              </button>
+            )}
 
-          <button
-            type="button"
-            onClick={() => {
-              setForm({ company_name: '',   address: '',    gstin: '' });
-              setEditingId(null);
-              setOpen(true);
-            }}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-rose-500 text-white hover:bg-rose-600 focus:outline-none focus:ring-2 focus:ring-rose-200 shadow"
-            aria-haspopup="dialog"
-          >
-            + Add Customer
-          </button>
+            <button
+              type="button"
+              onClick={() => {
+                setForm({ company_name: '', address: '', gstin: '' });
+                setEditingId(null);
+                setOpen(true);
+              }}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-rose-500 text-white hover:bg-rose-600 focus:outline-none focus:ring-2 focus:ring-rose-200 shadow"
+              aria-haspopup="dialog"
+            >
+              + Add Customer
+            </button>
+          </div>
         </div>
 
         {/* Card */}
@@ -248,7 +297,7 @@ setForm({ company_name: '', address: '', gstin: '' });
               <thead className="bg-slate-50">
                 <tr>
                   <th className="px-4 py-3 text-left font-medium text-slate-600">Customer</th>
-                  
+
                   <th className="px-4 py-3 text-left font-medium text-slate-600">GSTIN</th>
                   <th className="px-4 py-3 text-right font-medium text-slate-600">Actions</th>
                 </tr>
@@ -267,25 +316,25 @@ setForm({ company_name: '', address: '', gstin: '' });
                       </div>
                     </td>
 
-                 
+
                     <td className="px-4 py-4 text-slate-600">{r.gstin || 'N/A'}</td>
 
                     <td className="px-4 py-4 text-right">
                       <button
-                       onClick={() => navigate(`/customers/${r.id}`)}
+                        onClick={() => navigate(`/customers/${r.id}`)}
                         className="px-2 py-1 rounded-md bg-indigo-50 text-indigo-600 text-xs hover:underline"
-                           >
-                             Details
-                           </button>
+                      >
+                        Details
+                      </button>
                       <div className="inline-flex items-center gap-2">
                         <button
                           type="button"
                           onClick={() => {
                             setForm({
                               company_name: r.company_name || '',
-                              
+
                               address: r.address || '',
-                              
+
                               gstin: r.gstin || ''
                             });
                             setEditingId(r.id);
@@ -311,8 +360,8 @@ setForm({ company_name: '', address: '', gstin: '' });
                             }
                             (document.activeElement as HTMLElement)?.blur();
                             try {
-                             await api.deleteCustomer(r.id);
-                               setRows(prev => prev.filter(c => c.id !== r.id));
+                              await api.deleteCustomer(r.id);
+                              setRows(prev => prev.filter(c => c.id !== r.id));
                               try { toast.success('Customer deleted'); } catch { alert('Customer deleted'); }
                             } catch (err: any) {
                               console.error('deleteCustomer error:', err);
@@ -348,10 +397,10 @@ setForm({ company_name: '', address: '', gstin: '' });
                         onClick={() => {
                           setForm({
                             company_name: '',
-                            
+
                             address: '',
-                            
-                           
+
+
                             gstin: ''
                           });
                           setEditingId(null);
@@ -422,129 +471,129 @@ setForm({ company_name: '', address: '', gstin: '' });
 
         {/* CENTERED MODAL - Add/Edit Customer */}
         {open && (
-  <div
-    className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-    role="dialog"
-    aria-modal="true"
-    onMouseDown={onOverlayClick}
-  >
-    <div
-      ref={modalRef}
-      onMouseDown={(e) => e.stopPropagation()}
-      className="bg-white w-full max-w-xl rounded-2xl shadow-xl border border-slate-200"
-    >
-      {/* HEADER */}
-      <div className="flex items-start justify-between px-6 py-4 border-b">
-        <div>
-          <h2 className="text-lg font-semibold text-slate-800">
-            {editingId ? 'Edit Customer' : 'Add New Customer'}
-          </h2>
-          <p className="text-sm text-slate-500 mt-1">
-            Company details and GST information
-          </p>
-        </div>
-
-        <button
-          onClick={() => {
-            setOpen(false);
-            setEditingId(null);
-            setForm({ company_name: '', address: '', gstin: '' });
-          }}
-          className="text-slate-400 hover:text-slate-600"
-          aria-label="Close"
-        >
-          ✕
-        </button>
-      </div>
-
-      {/* BODY */}
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          submit();
-        }}
-        className="px-6 py-6 space-y-5"
-      >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Company Name */}
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Company Name <span className="text-rose-500">*</span>
-            </label>
-            <input
-              required
-              autoFocus
-              value={form.company_name}
-              onChange={(e) =>
-                setForm({ ...form, company_name: e.target.value })
-              }
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-200"
-              placeholder="Enter company name"
-            />
-          </div>
-
-          {/* GSTIN */}
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              GSTIN
-            </label>
-            <input
-              value={form.gstin}
-              onChange={(e) =>
-                setForm({ ...form, gstin: e.target.value })
-              }
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-200"
-              placeholder="Optional"
-            />
-          </div>
-
-          {/* Address */}
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Address
-            </label>
-            <textarea
-              rows={3}
-              value={form.address}
-              onChange={(e) =>
-                setForm({ ...form, address: e.target.value })
-              }
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-rose-200"
-              placeholder="Registered office address"
-            />
-          </div>
-        </div>
-
-        {/* FOOTER */}
-        <div className="flex items-center justify-end gap-3 pt-4 border-t">
-          <button
-            type="button"
-            onClick={() => {
-              setOpen(false);
-              setEditingId(null);
-              setForm({ company_name: '', address: '', gstin: '' });
-            }}
-            className="px-4 py-2 rounded-md border text-sm text-slate-600 hover:bg-slate-50"
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+            role="dialog"
+            aria-modal="true"
+            onMouseDown={onOverlayClick}
           >
-            Cancel
-          </button>
+            <div
+              ref={modalRef}
+              onMouseDown={(e) => e.stopPropagation()}
+              className="bg-white w-full max-w-xl rounded-2xl shadow-xl border border-slate-200"
+            >
+              {/* HEADER */}
+              <div className="flex items-start justify-between px-6 py-4 border-b">
+                <div>
+                  <h2 className="text-lg font-semibold text-slate-800">
+                    {editingId ? 'Edit Customer' : 'Add New Customer'}
+                  </h2>
+                  <p className="text-sm text-slate-500 mt-1">
+                    Company details and GST information
+                  </p>
+                </div>
 
-          <button
-            type="submit"
-            disabled={submitting}
-            className="px-5 py-2 rounded-md bg-rose-500 text-white text-sm font-medium hover:bg-rose-600 disabled:opacity-50"
-          >
-            {submitting
-              ? 'Saving…'
-              : editingId
-              ? 'Save Changes'
-              : 'Add Customer'}
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-)}
+                <button
+                  onClick={() => {
+                    setOpen(false);
+                    setEditingId(null);
+                    setForm({ company_name: '', address: '', gstin: '' });
+                  }}
+                  className="text-slate-400 hover:text-slate-600"
+                  aria-label="Close"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* BODY */}
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  submit();
+                }}
+                className="px-6 py-6 space-y-5"
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Company Name */}
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Company Name <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      required
+                      autoFocus
+                      value={form.company_name}
+                      onChange={(e) =>
+                        setForm({ ...form, company_name: e.target.value })
+                      }
+                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-200"
+                      placeholder="Enter company name"
+                    />
+                  </div>
+
+                  {/* GSTIN */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      GSTIN
+                    </label>
+                    <input
+                      value={form.gstin}
+                      onChange={(e) =>
+                        setForm({ ...form, gstin: e.target.value })
+                      }
+                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-200"
+                      placeholder="Optional"
+                    />
+                  </div>
+
+                  {/* Address */}
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Address
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={form.address}
+                      onChange={(e) =>
+                        setForm({ ...form, address: e.target.value })
+                      }
+                      className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-rose-200"
+                      placeholder="Registered office address"
+                    />
+                  </div>
+                </div>
+
+                {/* FOOTER */}
+                <div className="flex items-center justify-end gap-3 pt-4 border-t">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpen(false);
+                      setEditingId(null);
+                      setForm({ company_name: '', address: '', gstin: '' });
+                    }}
+                    className="px-4 py-2 rounded-md border text-sm text-slate-600 hover:bg-slate-50"
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="px-5 py-2 rounded-md bg-rose-500 text-white text-sm font-medium hover:bg-rose-600 disabled:opacity-50"
+                  >
+                    {submitting
+                      ? 'Saving…'
+                      : editingId
+                        ? 'Save Changes'
+                        : 'Add Customer'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
       </div>
     </Layout>

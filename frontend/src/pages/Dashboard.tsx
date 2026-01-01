@@ -116,7 +116,7 @@ export default function Dashboard() {
               {getISTGreeting()}, {user?.name || "User"}
             </h1>
             <p className="text-xs text-slate-500 mt-1">
-              Portfolio Value • ₹{summary?.portfolio_value?.toLocaleString() ?? "—"}
+              Portfolio Value • ₹{(summary?.portfolio_value ?? 0).toLocaleString()}
             </p>
           </div>
 
@@ -171,7 +171,7 @@ export default function Dashboard() {
 
   <AlertCard
     title="Revenue Generated"
-    value={`₹${summary?.won_revenue?.toLocaleString() ?? "—"}`}
+    value={`₹${(summary?.won_revenue ?? 0).toLocaleString()}`}
     tone="success"
   />
 </div>
@@ -179,18 +179,16 @@ export default function Dashboard() {
         {/* ================= MAIN GRID ================= */}
         <div className="grid lg:grid-cols-3 gap-8">
 
-       {/* ================= ACTION TABLE ================= */}
-<div className="lg:col-span-2 bg-white border border-slate-200 rounded-2xl">
+{/* ================= ACTION TABLE ================= */}
+<div className="lg:col-span-2 bg-white border border-slate-200 rounded-2xl shadow-sm">
   {/* Header */}
-  <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-    <div>
-      <h3 className="text-sm font-semibold text-slate-900">
-        Quotations Requiring Action
-      </h3>
-      <p className="text-xs text-slate-500 mt-0.5">
-        Items that need immediate attention to avoid revenue risk
-      </p>
-    </div>
+  <div className="px-6 py-5 border-b border-slate-100">
+    <h3 className="text-sm font-semibold text-slate-900">
+      Quotations Requiring Action
+    </h3>
+    <p className="text-xs text-slate-500 mt-1">
+      Items that need immediate attention to avoid revenue risk
+    </p>
   </div>
 
   {/* Table */}
@@ -198,14 +196,14 @@ export default function Dashboard() {
     <table className="w-full text-sm">
       <thead className="bg-slate-50 text-xs text-slate-500">
         <tr>
-          <th className="px-6 py-3 text-left w-6">Priority</th>
-          <th className="py-3 text-left">Quotation</th>
-          <th className="py-3 text-left">Customer</th>
-          <th className="py-3 text-left">Validity</th>
-          <th className="py-3 text-center">Days</th>
-          <th className="py-3 text-left">Last Follow-Up</th>
-          <th className="py-3 text-left">Action</th>
-          {isAdmin && <th className="py-3 text-left">Owner</th>}
+          <th className="px-6 py-3 text-left w-10">Priority</th>
+          <th className="px-6 py-3 text-left">Quotation</th>
+          <th className="px-6 py-3 text-left">Customer</th>
+          <th className="px-6 py-3 text-left">Validity</th>
+          <th className="px-6 py-3 text-center w-20">Days</th>
+          <th className="px-6 py-3 text-left">Last Follow-Up</th>
+          <th className="px-6 py-3 text-left">Action</th>
+          {isAdmin && <th className="px-6 py-3 text-left">Owner</th>}
         </tr>
       </thead>
 
@@ -218,10 +216,10 @@ export default function Dashboard() {
             <tr
               key={q.id}
               onClick={() => navigate(`/quotations/${q.id}`)}
-              className="hover:bg-slate-50 cursor-pointer transition"
+              className="hover:bg-slate-50 cursor-pointer transition-colors"
             >
-              {/* Priority Indicator */}
-              <td className="px-6 py-4">
+              {/* Priority */}
+              <td className="px-6 py-5">
                 <span
                   className={`inline-block w-2.5 h-2.5 rounded-full
                     ${
@@ -235,24 +233,24 @@ export default function Dashboard() {
               </td>
 
               {/* Quotation No */}
-              <td className="py-4 font-medium text-slate-900">
+              <td className="px-6 py-5 font-medium text-slate-900">
                 {q.quotation_no}
               </td>
 
               {/* Customer */}
-              <td className="py-4 text-slate-700">
+              <td className="px-6 py-5 text-slate-700">
                 {q.company_name}
               </td>
 
               {/* Validity */}
-              <td className="py-4 text-slate-600">
+              <td className="px-6 py-5 text-slate-600">
                 {formatDate(q.valid_until)}
               </td>
 
-              {/* Remaining Days */}
-              <td className="py-4 text-center font-medium">
+              {/* Days */}
+              <td className="px-6 py-5 text-center">
                 <span
-                  className={`inline-flex px-2 py-0.5 rounded-md text-xs
+                  className={`inline-flex min-w-[36px] justify-center px-2 py-0.5 rounded-md text-xs font-medium
                     ${
                       isCritical
                         ? "bg-red-100 text-red-700"
@@ -266,12 +264,12 @@ export default function Dashboard() {
               </td>
 
               {/* Last Follow-Up */}
-              <td className="py-4 text-slate-500">
+              <td className="px-6 py-5 text-slate-500">
                 {formatDate(q.last_followup_at)}
               </td>
 
               {/* Action */}
-              <td className="py-4">
+              <td className="px-6 py-5">
                 <span
                   className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium
                     ${
@@ -284,9 +282,9 @@ export default function Dashboard() {
                 </span>
               </td>
 
-              {/* Salesperson */}
+              {/* Owner */}
               {isAdmin && (
-                <td className="py-4 text-slate-500">
+                <td className="px-6 py-5 text-slate-500">
                   {q.salesperson_name}
                 </td>
               )}
@@ -297,6 +295,7 @@ export default function Dashboard() {
     </table>
   </div>
 </div>
+
 
           {/* ================= FOLLOW-UPS PANEL ================= */}
           <div className="bg-white border rounded-xl p-6">
@@ -386,7 +385,7 @@ function AlertCard({
     <div className={`rounded-xl border p-4 ${toneMap[tone]}`}>
       <div className="text-xs font-medium opacity-80">{title}</div>
       <div className="mt-1 text-2xl font-semibold">
-        {value ?? "—"}
+       {value ?? 0}
       </div>
     </div>
   );

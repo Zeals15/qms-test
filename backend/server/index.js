@@ -659,79 +659,51 @@ app.get('/api/debug-headers', (req, res) => {
   res.json({ hasAuthorization: !!header, maskedAuthorization: masked });
 });
 
-// ---------- Auth routes ----------
-// ---------- Auth routes ----------
-app.post('/api/login', async (req, res) => {
-  const { username, email, password } = req.body || {};
 
-  if (!email || !password) {
+// ---------- Auth routes ----------
+
+
+app.post('/api/login', async (req, res) => {
+  const { username, password } = req.body || {};
+
+  if (!username || !password) {
     return res.status(400).json({
       error: 'missing_credentials',
-      message: 'email and password are required',
+      message: 'username and password are required',
     });
   }
 
   const USERNAME_REGEX =
     /^(?=.*[A-Z])(?=.*[0-9])(?=.*[@_])[A-Za-z0-9@_]{4,100}$/;
 
+  if (!USERNAME_REGEX.test(username)) {
+    return res.status(400).json({
+      error: 'invalid_username_format',
+      message:
+        'Username must contain at least one capital letter, one number, and @ or _',
+    });
+  }
+
   let conn;
   try {
     conn = await db.getConnection();
 
-    let rows;
-
-    /* ================= ADMIN LOGIN ================= */
-    if (!username) {
-      // Admin login: email + password only
-      [rows] = await conn.query(
-        `SELECT 
-           id,
-           username,
-           email,
-           name,
-           password_hash,
-           role,
-           is_active
-         FROM users
-         WHERE email = ? AND role = 'admin'
-         LIMIT 1`,
-        [email]
-      );
-    }
-    else if (username && username.toLowerCase() === 'admin') {
-      [rows] = await conn.query(
-        `SELECT id, username, email, name, password_hash, role, is_active
-     FROM users
-     WHERE email = ? AND role = 'admin'
-     LIMIT 1`,
-        [email]
-      );
-    }
-    /* ================= NON-ADMIN LOGIN ================= */
-    else {
-      if (!USERNAME_REGEX.test(username)) {
-        return res.status(400).json({
-          error: 'invalid_username_format',
-          message:
-            'Username must contain at least one capital letter, one number, and @ or _',
-        });
-      }
-
-      [rows] = await conn.query(
-        `SELECT 
-           id,
-           username,
-           email,
-           name,
-           password_hash,
-           role,
-           is_active
-         FROM users
-         WHERE username = ? AND email = ?
-         LIMIT 1`,
-        [username, email]
-      );
-    }
+    const [rows] = await conn.query(
+      `
+      SELECT
+        id,
+        username,
+        email,
+        name,
+        password_hash,
+        role,
+        is_active
+      FROM users
+      WHERE username = ?
+      LIMIT 1
+      `,
+      [username]
+    );
 
     if (!rows || !rows[0]) {
       return res.status(401).json({ error: 'invalid_credentials' });
@@ -751,9 +723,9 @@ app.post('/api/login', async (req, res) => {
       return res.status(401).json({ error: 'invalid_credentials' });
     }
 
-    // JWT payload (unchanged)
     const tokenPayload = {
       id: user.id,
+      username: user.username,
       email: user.email,
       role: user.role,
       name: user.name,
@@ -767,19 +739,22 @@ app.post('/api/login', async (req, res) => {
       token,
       user: {
         id: user.id,
-        username: user.username, // may be internal for admin
+        username: user.username,
         email: user.email,
         name: user.name,
         role: user.role,
       },
     });
   } catch (err) {
-    console.error('Login error:', err && err.message ? err.message : err);
-    return res.status(500).json({ error: 'server error' });
+    console.error('Login error:', err);
+    return res.status(500).json({ error: 'server_error' });
   } finally {
-    if (conn) try { await conn.release(); } catch { }
+    if (conn) {
+      try { await conn.release(); } catch {}
+    }
   }
 });
+
 
 
 

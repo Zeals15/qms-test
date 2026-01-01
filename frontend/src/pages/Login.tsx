@@ -9,7 +9,7 @@ const USERNAME_REGEX =
 
 export default function Login() {
   const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
+  
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -18,49 +18,46 @@ export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  // LOGIN SUBMIT (requires name + email + password)
+ // LOGIN SUBMIT (requires username + password)
+
+ 
 async function handleLogin(e: React.FormEvent) {
   e.preventDefault();
   setErrorMessage(null);
 
   const trimmedUsername = username.trim();
-  const isAdminLogin = trimmedUsername === "Admin"||trimmedUsername === "";
 
-  if (!email.trim() || !password) {
-    setErrorMessage("Please enter email and password.");
+  if (!trimmedUsername || !password) {
+    setErrorMessage("Please enter username and password.");
     return;
   }
 
-  if (!isAdminLogin) {
-    if (!USERNAME_REGEX.test(trimmedUsername)) {
-      setErrorMessage(
-        "Username must contain 1 capital letter, 1 number, and @ or _"
-      );
-      return;
-    }
+  if (!USERNAME_REGEX.test(trimmedUsername)) {
+    setErrorMessage(
+      "Username must contain 1 capital letter, 1 number, and @ or _"
+    );
+    return;
   }
 
   setLoading(true);
+
   try {
-    const payload: any = {
-      email: email.trim(),
+    const payload = {
+      username: trimmedUsername,
       password,
     };
-
-    if (!isAdminLogin) {
-      payload.username = trimmedUsername;
-    }
 
     const res = await api.login(payload);
 
     if (!res || !res.token) {
-      setErrorMessage("Invalid credentials — please try again.");
+      setErrorMessage("Invalid username or password.");
       return;
     }
 
     const serverUser = res.user
       ? {
           id: res.user.id,
+          username: res.user.username,
           email: res.user.email,
           name: res.user.name,
           role: res.user.role,
@@ -74,18 +71,16 @@ async function handleLogin(e: React.FormEvent) {
     if (role === "admin") navigate("/admin", { replace: true });
     else if (role === "sales") navigate("/sales", { replace: true });
     else if (role === "viewer") navigate("/viewer", { replace: true });
-    else if (role === "user") navigate("/user", { replace: true });
     else navigate("/dashboard", { replace: true });
 
   } catch (err: any) {
     console.error("Login error:", err);
-    setErrorMessage(err?.message ?? "Login failed — try again later.");
+    setErrorMessage("Login failed — please try again.");
   } finally {
-  setLoading(false);
-  setShowPassword(false);
+    setLoading(false);
+    setShowPassword(false);
   }
 }
-
   
 
   return (
@@ -155,17 +150,7 @@ async function handleLogin(e: React.FormEvent) {
                       />
                     </div>
 
-                    <div>
-                      <label htmlFor="login_email" className="block text-sm font-medium text-slate-700">Email</label>
-                      <input
-                        id="login_email"
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="you@company.com"
-                        className="mt-2 block w-full rounded-lg border border-slate-200 px-4 py-3"
-                      />
-                    </div>
+                    
 
                     <div>
   <label htmlFor="login_password" className="block text-sm font-medium text-slate-700">

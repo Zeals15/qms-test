@@ -1245,11 +1245,11 @@ export default function CreateQuotation() {
                         className="w-full rounded-md border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-rose-400"
                         aria-label={`Product for line item ${idx + 1}`}
                       />
-                      {it.description && (
+                      {it.product_id > 0 && openRow !== it.id && (
                         <textarea
-                          className="mt-1 w-full rounded-md border border-gray-200 px-2 py-1 text-xs focus:ring-1 focus:ring-rose-400 focus:outline-none"
+                          className="mt-1 w-full rounded-md border border-gray-200 px-2 py-1 text-xs
+                                     focus:ring-1 focus:ring-rose-400 focus:outline-none"
                           placeholder="Description (editable)"
-                          aria-label={`Description for line item ${idx + 1}`}
                           value={it.description}
                           onChange={(e) =>
                             updateItem(it.id, { description: e.target.value })
@@ -1257,39 +1257,67 @@ export default function CreateQuotation() {
                           rows={2}
                         />
                       )}
-
                       {openRow === it.id && (
-                        <div className="absolute bg-white border w-full z-10 max-h-40 overflow-auto">
-                          {products
-                            .filter((p) =>
-                              (p.name ?? "")
-                                .toLowerCase()
-                                .includes(
-                                  (productSearch[it.id] || "").toLowerCase()
-                                )
-                            )
-                            .map((p) => (
-                              <div
-                                key={p.id}
-                                className="px-2 py-1 hover:bg-gray-100 cursor-pointer"
-                                onMouseDown={() => onProductSelect(it.id, p)}
-                              >
-                                {p.name} — ₹{p.unit_price ?? 0}
-                              </div>
-                            ))}
+                        <div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg">
 
-                          {/* ➕ ADD PRODUCT OPTION */}
-                          {productSearch[it.id] &&
-                            !products.some(
-                              (p) =>
-                                (p.name ?? "").toLowerCase() ===
-                                (productSearch[it.id] ?? "").toLowerCase()
-                            ) && (
+                          {/* ================= SCROLLABLE LIST ================= */}
+                          <div className="max-h-56 overflow-auto">
+                            {products
+                              .filter((p) =>
+                                (p.name ?? "")
+                                  .toLowerCase()
+                                  .includes((productSearch[it.id] || "").toLowerCase())
+                              )
+                              .map((p) => (
+                                <div
+                                  key={p.id}
+                                  onMouseDown={() => onProductSelect(it.id, p)}
+                                  className="px-3 py-2 cursor-pointer hover:bg-gray-50 border-b last:border-b-0"
+                                >
+                                  <div className="text-sm font-semibold text-gray-900">
+                                    {p.name}
+                                  </div>
+
+                                  <div className="text-xs text-gray-500 mt-0.5">
+                                    ₹{(p.unit_price ?? 0).toLocaleString()} • {p.uom ?? "NOS"} • {p.tax_rate ?? 0}% GST
+                                  </div>
+
+                                  {p.description && (
+                                    <div className="text-xs text-gray-400 mt-0.5 line-clamp-2">
+                                      {p.description}
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                          </div>
+
+                          {/* ================= STICKY ADD PRODUCT ================= */}
+                          {products.length === 0 && (
+                            <div className="px-3 py-2 text-xs text-gray-400">
+                              No products found
+                            </div>
+                          )}
+                          {/* ================= STICKY ADD PRODUCT ================= */}
+                          {!products.some(
+                            (p) =>
+                              (p.name ?? "").toLowerCase() ===
+                              (productSearch[it.id] ?? "").toLowerCase()
+                          ) && (
                               <div
-                                className="px-2 py-1 border-t text-rose-600 cursor-pointer hover:bg-rose-50"
+                                className="
+      sticky bottom-0
+      bg-white
+      border-t
+      px-3 py-2
+      text-rose-600
+      text-sm font-medium
+      cursor-pointer
+      hover:bg-rose-50
+      shadow-[0_-1px_4px_rgba(0,0,0,0.06)]
+    "
                                 onMouseDown={() => {
                                   setProductForm({
-                                    name: productSearch[it.id],
+                                    name: productSearch[it.id] || "",
                                     description: "",
                                     uom: "NOS",
                                     unit_price: "",
@@ -1301,7 +1329,7 @@ export default function CreateQuotation() {
                                   setOpenRow(null);
                                 }}
                               >
-                                + Add product "{productSearch[it.id]}"
+                                + Add product{productSearch[it.id] ? ` "${productSearch[it.id]}"` : ""}
                               </div>
                             )}
                         </div>
